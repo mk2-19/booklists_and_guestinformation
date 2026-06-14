@@ -3,13 +3,7 @@ import os
 import sqlite3
 from datetime import date, datetime
 from pathlib import Path
-
-DB_DIR = Path("/tmp/book_reflection_app")
-DB_DIR.mkdir(parents=True, exist_ok=True)
-DB_PATH = DB_DIR / "books_app.db"
-
 from typing import Dict, List, Optional
-
 
 import streamlit as st
 
@@ -20,11 +14,14 @@ except Exception:
 
 st.set_page_config(page_title="読書リフレクション", page_icon="📚", layout="wide")
 
-DB_PATH = Path("/home/user/book_reflection_app/books_app.db")
+# Streamlit Cloud で書き込み可能な一時領域を利用
+DB_DIR = Path("/tmp/book_reflection_app")
+DB_DIR.mkdir(parents=True, exist_ok=True)
+DB_PATH = DB_DIR / "books_app.db"
 
 
 def get_conn() -> sqlite3.Connection:
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(DB_PATH, check_same_thread=False)
     conn.row_factory = sqlite3.Row
     return conn
 
@@ -45,6 +42,7 @@ def jload(value: Optional[str], default):
 def init_db() -> None:
     conn = get_conn()
     cur = conn.cursor()
+
     cur.execute(
         """
         CREATE TABLE IF NOT EXISTS authors (
@@ -60,6 +58,7 @@ def init_db() -> None:
         )
         """
     )
+
     cur.execute(
         """
         CREATE TABLE IF NOT EXISTS books (
@@ -87,6 +86,7 @@ def init_db() -> None:
         )
         """
     )
+
     cur.execute(
         """
         CREATE TABLE IF NOT EXISTS sessions (
@@ -104,11 +104,13 @@ def init_db() -> None:
         )
         """
     )
+
     conn.commit()
 
     count = cur.execute("SELECT COUNT(*) FROM books").fetchone()[0]
     if count == 0:
         seed_data(conn)
+
     conn.close()
 
 
@@ -148,7 +150,7 @@ def seed_data(conn: sqlite3.Connection) -> None:
             "雇用・学び・人生設計を一体で捉える視点が広く受け入れられた。",
         ),
     ]
-    conn.executemany("INSERT INTO authors VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", authors)
+    conn.executemany("INSERT OR IGNORE INTO authors VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", authors)
 
     books = [
         (
@@ -164,12 +166,10 @@ def seed_data(conn: sqlite3.Connection) -> None:
             "習慣を意志の問題ではなく環境設計として扱う視点が強く残った。",
             "多くの読者は『小さく始める』『仕組みで継続する』点を重視し、実践性の高さがよく議論される。",
             "成果を急ぐ前に、続けられる構造を作ることの重要性を伝えたい。",
-            jdump(
-                [
-                    "やる気より環境設計のほうが再現性が高い",
-                    "小さな改善の積み重ねが大きな変化になる",
-                ]
-            ),
+            jdump([
+                "やる気より環境設計のほうが再現性が高い",
+                "小さな改善の積み重ねが大きな変化になる",
+            ]),
             "仕事の継続課題は、行動目標より環境設計の見直しとして再定義する。",
             "『頑張る方法』より『続く仕組み』を作る本として紹介する。",
             "続ける力は意志力より設計力。小さく始められる環境づくりが強い。",
@@ -191,12 +191,10 @@ def seed_data(conn: sqlite3.Connection) -> None:
             "主体性の話は知っていたが、実際の対人場面に落とし込むとまだ浅い。",
             "『主体性』『Win-Win』『重要事項を優先』が広く取り上げられる。",
             "成果より前に、自分の反応の選び方を見直す大切さを伝えたい。",
-            jdump(
-                [
-                    "知っていることと、実際に使えていることは違う",
-                    "目先の効率より、原則に基づく判断が長期的に効く",
-                ]
-            ),
+            jdump([
+                "知っていることと、実際に使えていることは違う",
+                "目先の効率より、原則に基づく判断が長期的に効く",
+            ]),
             "主体性は感情を抑えることではなく、反応を選び直す力として扱う。",
             "知っていることと使えていることの差が大きい本として共有する。",
             "知っている言葉ほど、生活の具体場面に落とさないと空回りする。",
@@ -218,12 +216,10 @@ def seed_data(conn: sqlite3.Connection) -> None:
             "転職を単発で考えるのではなく、長い人生の設計として捉え直す必要を感じた。",
             "100年時代という前提から、学び直しや複数ステージの人生設計がよく議論される。",
             "今の不安を解消するには、短期最適より長期視点の設計が必要だと伝えたい。",
-            jdump(
-                [
-                    "長寿化でキャリア設計の前提が変わる",
-                    "目先の転職ではなく人生全体の設計が必要",
-                ]
-            ),
+            jdump([
+                "長寿化でキャリア設計の前提が変わる",
+                "目先の転職ではなく人生全体の設計が必要",
+            ]),
             "目先の条件改善だけではなく、人生全体の持続可能性を考える必要がある。",
             "転職や将来不安の話を、長期視点に広げる起点として使う。",
             "キャリアは次の会社選びだけでなく、長い人生でどう学び、どう働くかの設計そのもの。",
@@ -234,49 +230,52 @@ def seed_data(conn: sqlite3.Connection) -> None:
         ),
     ]
     conn.executemany(
-        "INSERT INTO books VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        "INSERT OR IGNORE INTO books VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         books,
     )
 
-    sessions = [
-        (
-            1,
-            "初回感想",
-            jdump(["音声", "壁打ち"]),
-            "習慣は気合ではなく環境設計という話が特に刺さった。",
-            "根性論ではなく仕組みの話として紹介できそう。",
-            "仕事の継続課題にも当てはまりそう。",
-            "続く仕組みを作ることを伝えたい。",
-            "継続の仕組みを作る発想として、仕事にも転用しやすいと整理。",
-            "2026-06-10T10:30:00",
-        ),
-        (
-            1,
-            "読書会前",
-            jdump(["追記"]),
-            "他人に伝えるなら、才能より再現性のある仕組みの話として紹介したい。",
-            "反論が来たら、才能ではなく環境の話として返せそう。",
-            "自分の朝の習慣にも落とし込める。",
-            "誰でも改善できる構造というメッセージにしたい。",
-            "共有メッセージは『誰でも改善できる構造』に寄せると伝わりやすい。",
-            "2026-06-13T09:00:00",
-        ),
-        (
-            2,
-            "読書中メモ",
-            jdump(["音声"]),
-            "理解したつもりの概念を、実際の職場の場面でまだ使いきれていない。",
-            "抽象概念で終わらせず、対人場面での具体例に変える必要がある。",
-            "会議や人間関係での反応の選び方に関係する。",
-            "知っていることと使えることの差を伝えたい。",
-            "概念理解から行動転用へ移る段階で、具体シーンの想起が必要。",
-            "2026-06-14T08:00:00",
-        ),
-    ]
-    conn.executemany(
-        "INSERT INTO sessions (book_id, title, tags, impression_note, counter_note, personal_note, share_note, ai_response, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-        sessions,
-    )
+    existing_session_count = conn.execute("SELECT COUNT(*) FROM sessions").fetchone()[0]
+    if existing_session_count == 0:
+        sessions = [
+            (
+                1,
+                "初回感想",
+                jdump(["音声", "壁打ち"]),
+                "習慣は気合ではなく環境設計という話が特に刺さった。",
+                "根性論ではなく仕組みの話として紹介できそう。",
+                "仕事の継続課題にも当てはまりそう。",
+                "続く仕組みを作ることを伝えたい。",
+                "継続の仕組みを作る発想として、仕事にも転用しやすいと整理。",
+                "2026-06-10T10:30:00",
+            ),
+            (
+                1,
+                "読書会前",
+                jdump(["追記"]),
+                "他人に伝えるなら、才能より再現性のある仕組みの話として紹介したい。",
+                "反論が来たら、才能ではなく環境の話として返せそう。",
+                "自分の朝の習慣にも落とし込める。",
+                "誰でも改善できる構造というメッセージにしたい。",
+                "共有メッセージは『誰でも改善できる構造』に寄せると伝わりやすい。",
+                "2026-06-13T09:00:00",
+            ),
+            (
+                2,
+                "読書中メモ",
+                jdump(["音声"]),
+                "理解したつもりの概念を、実際の職場の場面でまだ使いきれていない。",
+                "抽象概念で終わらせず、対人場面での具体例に変える必要がある。",
+                "会議や人間関係での反応の選び方に関係する。",
+                "知っていることと使えることの差を伝えたい。",
+                "概念理解から行動転用へ移る段階で、具体シーンの想起が必要。",
+                "2026-06-14T08:00:00",
+            ),
+        ]
+        conn.executemany(
+            "INSERT INTO sessions (book_id, title, tags, impression_note, counter_note, personal_note, share_note, ai_response, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            sessions,
+        )
+
     conn.commit()
 
 
@@ -318,6 +317,7 @@ def book_from_row(row: sqlite3.Row) -> Dict:
     }
 
 
+@st.cache_data(ttl=3)
 def list_books() -> List[Dict]:
     conn = get_conn()
     rows = conn.execute(
@@ -333,6 +333,7 @@ def list_books() -> List[Dict]:
     return [book_from_row(row) for row in rows]
 
 
+@st.cache_data(ttl=3)
 def get_book(book_id: int) -> Dict:
     conn = get_conn()
     row = conn.execute(
@@ -346,9 +347,12 @@ def get_book(book_id: int) -> Dict:
         (book_id,),
     ).fetchone()
     conn.close()
+    if row is None:
+        raise ValueError(f"book_id={book_id} の本が見つかりません")
     return book_from_row(row)
 
 
+@st.cache_data(ttl=3)
 def list_sessions(book_id: int) -> List[Dict]:
     conn = get_conn()
     rows = conn.execute(
@@ -372,6 +376,12 @@ def list_sessions(book_id: int) -> List[Dict]:
     ]
 
 
+def clear_data_cache() -> None:
+    list_books.clear()
+    get_book.clear()
+    list_sessions.clear()
+
+
 def save_book_fields(book_id: int, goal: str, core_impression: str, share_message: str) -> None:
     conn = get_conn()
     conn.execute(
@@ -380,6 +390,7 @@ def save_book_fields(book_id: int, goal: str, core_impression: str, share_messag
     )
     conn.commit()
     conn.close()
+    clear_data_cache()
 
 
 def save_session(
@@ -411,6 +422,7 @@ def save_session(
     )
     conn.commit()
     conn.close()
+    clear_data_cache()
 
 
 def find_or_create_author(author_name: str) -> int:
@@ -440,6 +452,7 @@ def find_or_create_author(author_name: str) -> int:
     )
     conn.commit()
     conn.close()
+    clear_data_cache()
     return next_id
 
 
@@ -451,6 +464,7 @@ def add_book(
     status: str,
     themes: List[str],
     share_message: str,
+    amazon_url: str = "",
 ) -> int:
     author_id = find_or_create_author(author_name)
     conn = get_conn()
@@ -464,7 +478,7 @@ def add_book(
             title,
             subtitle,
             thumbnail or "https://placehold.co/300x420?text=NO+COVER",
-            "",
+            amazon_url,
             status,
             jdump([str(date.today())]),
             jdump(themes),
@@ -484,9 +498,11 @@ def add_book(
     )
     conn.commit()
     conn.close()
+    clear_data_cache()
     return next_id
 
 
+@st.cache_data(ttl=10)
 def list_authors() -> List[Dict]:
     conn = get_conn()
     rows = conn.execute("SELECT * FROM authors ORDER BY name").fetchall()
@@ -494,6 +510,7 @@ def list_authors() -> List[Dict]:
     return [dict(row) for row in rows]
 
 
+@st.cache_data(ttl=10)
 def grouped_books_by_theme() -> Dict[str, List[Dict]]:
     grouped: Dict[str, List[Dict]] = {}
     for book in list_books():
@@ -547,8 +564,6 @@ def ai_reflect(book: Dict, impression: str, counter: str, personal: str, share_n
 def ensure_state() -> None:
     if "nav_page" not in st.session_state:
         st.session_state.nav_page = "ホーム"
-    if "library_tab" not in st.session_state:
-        st.session_state.library_tab = "本"
     if "selected_book_id" not in st.session_state:
         st.session_state.selected_book_id = 1
     if "selected_guest_id" not in st.session_state:
@@ -634,6 +649,10 @@ def render_sidebar() -> None:
         if st.sidebar.button("← 元の画面に戻る", use_container_width=True):
             st.session_state.nav_page = st.session_state.detail_return_page
             st.rerun()
+
+    st.sidebar.divider()
+    st.sidebar.caption("DB保存先")
+    st.sidebar.code(str(DB_PATH), language="text")
 
 
 def render_home() -> None:
@@ -825,6 +844,7 @@ def add_book_form() -> None:
             title = st.text_input("書名")
             subtitle = st.text_input("サブタイトル")
             author_name = st.text_input("著者名")
+            amazon_url = st.text_input("Amazon URL")
             thumbnail = st.text_input("表紙画像URL", placeholder="未入力ならプレースホルダ")
             status = st.selectbox("読書ステータス", ["読書中", "読了", "未着手"])
             themes = st.text_input("テーマ", placeholder="例: 習慣, 継続, 働き方")
@@ -833,13 +853,14 @@ def add_book_form() -> None:
 
             if submitted and title and author_name:
                 new_id = add_book(
-                    title,
-                    subtitle,
-                    author_name,
-                    thumbnail,
-                    status,
-                    [t.strip() for t in themes.split(",") if t.strip()],
-                    share_message,
+                    title=title,
+                    subtitle=subtitle,
+                    author_name=author_name,
+                    thumbnail=thumbnail,
+                    status=status,
+                    themes=[t.strip() for t in themes.split(",") if t.strip()],
+                    share_message=share_message,
+                    amazon_url=amazon_url,
                 )
                 st.success("本を追加しました。")
                 open_book_detail(new_id, "ライブラリ")
@@ -888,12 +909,12 @@ def render_library_page() -> None:
     with tab_themes:
         grouped = grouped_books_by_theme()
         cols = st.columns(3)
-        for idx, (theme, books) in enumerate(grouped.items()):
+        for idx, (theme, books_in_theme) in enumerate(grouped.items()):
             with cols[idx % 3]:
                 with st.container(border=True):
                     st.markdown(f"**#{theme}**")
-                    st.caption(f"関連本: {len(books)}冊")
-                    for book in books[:3]:
+                    st.caption(f"関連本: {len(books_in_theme)}冊")
+                    for book in books_in_theme[:3]:
                         if st.button(book["title"], key=f"theme_{theme}_{book['id']}", use_container_width=True):
                             open_book_detail(book["id"], "ライブラリ")
 
