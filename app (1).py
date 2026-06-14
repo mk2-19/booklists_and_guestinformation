@@ -736,10 +736,18 @@ def render_deepen_book_page() -> None:
             }
 
             if ai_btn:
-                ai_text = ai_reflect(book, impression, counter, personal, share)
-                st.session_state[form_key]["ai_response"] = ai_text
-                st.rerun()
+                ai_text =def ai_reflect(book, impression, counter, personal, share_note):
 
+    st.write("DEBUG")
+
+    try:
+        api_key = st.secrets["OPENAI_API_KEY"]
+        st.success("APIキー取得成功")
+    except Exception as e:
+        st.error(f"APIキー取得失敗: {e}")
+        return "APIキーが取得できません"
+
+    ...
             if save_btn:
                 save_book_fields(book["id"], goal, impression, share)
                 save_session(
