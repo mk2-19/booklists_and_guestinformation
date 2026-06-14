@@ -3,7 +3,13 @@ import os
 import sqlite3
 from datetime import date, datetime
 from pathlib import Path
+
+DB_DIR = Path("/tmp/book_reflection_app")
+DB_DIR.mkdir(parents=True, exist_ok=True)
+DB_PATH = DB_DIR / "books_app.db"
+
 from typing import Dict, List, Optional
+
 
 import streamlit as st
 
